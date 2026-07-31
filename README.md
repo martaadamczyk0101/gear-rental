@@ -18,6 +18,13 @@ This README is updated as each feature is delivered — see `PLAN.md` for the fu
   - `status` values are normalized case-insensitively (`"In Use"` → `in use`, `"Repair"` → `in repair`, etc.)
   - two informational fields present on some seed rows (`assignedTo`, `history`) aren't part of the current schema and are ignored — a hardware item seeded as `in use` is not automatically linked to a rental record
 - **Login (MVP)**: `POST /auth/login` verifies email/password and returns the user's id/email/is_admin.
+- **Admin command center API**:
+  - `GET /hardware` — list all hardware (any authenticated user; no filter/sort yet — coming next phase)
+  - `POST /hardware` — create a hardware item (admin only, always starts `available`)
+  - `DELETE /hardware/{id}` — delete a hardware item (admin only; blocked with `409` while the item is `in use`)
+  - `PATCH /hardware/{id}/repair-toggle` — toggle between `available` and `in repair` (admin only; blocked with `409` while `in use`, so an item can't be pulled for repair out from under the person using it)
+  - `PATCH /hardware/{id}/notes` — update an item's notes (admin only)
+  - `POST /users` — create a user account with email/password/is_admin (admin only; the only way to gain access to the system; `409` on duplicate email)
 
 ### Known limitation: MVP auth
 
@@ -38,6 +45,8 @@ booksy/
       seed.py               # seed.json validation/normalization + admin bootstrap
       routers/
         auth.py               # /auth/login, /auth/logout, /auth/me
+        hardware.py            # hardware CRUD, repair-toggle, notes (admin) + list (any user)
+        users.py                # admin-only user creation
     requirements.txt
   seed.json
   PLAN.md
@@ -58,8 +67,8 @@ On startup the app creates `backend/booksy.db` (SQLite), bootstraps the admin ac
 
 ## Not built yet
 
-- Admin command center endpoints/UI (hardware CRUD, repair toggle, notes, user creation)
-- Dashboard (filter/sort) and rental (rent/return, my rentals) endpoints/UI
+- Admin command center UI (the API from Phase 2 above is done; no frontend yet)
+- Dashboard filtering/sorting and rental (rent/return, my rentals) endpoints/UI
 - Frontend (Vue 3 + Vite)
 - Real session/token-based authentication
 - LLM-powered natural-language hardware search (explicitly deferred — see `PLAN.md`)
