@@ -7,7 +7,7 @@ This README is updated as each feature is delivered — see `PLAN.md` for the fu
 ## Tech Stack
 
 - **Backend**: Python, FastAPI, SQLAlchemy, SQLite
-- **Frontend**: Vue 3 + Vite (not yet built — see PLAN.md)
+- **Frontend**: Vue 3 + Vite, Pinia (state), Vue Router
 
 ## Features implemented so far
 
@@ -31,6 +31,12 @@ This README is updated as each feature is delivered — see `PLAN.md` for the fu
   - `POST /hardware/{id}/return` — return an item (owner or admin only; `403` otherwise). `409` if the item isn't currently rented.
   - `GET /rentals/mine` — the current user's open (not yet returned) rentals, with hardware details nested — powers the "My Rentals" tab.
   - Covered by an automated `pytest` suite (`backend/tests/`) exercising the state machine: rent success, conflicts on already-rented/in-repair items, return success/authorization, and filter/sort behavior.
+- **Frontend foundation**:
+  - Login page (`/login`) that calls `POST /auth/login` and, on success, stores the returned user (id/email/is_admin) in a Pinia store, persisted to `localStorage` so a page refresh doesn't log you out.
+  - An API client (`src/api/client.js`) that automatically attaches the `X-User-Id` header to every request based on the logged-in user.
+  - Router guards: unauthenticated users are redirected to `/login` (preserving where they were headed, so login lands them back where they intended to go); non-admins are redirected away from `/admin`.
+  - Placeholder Dashboard/My Rentals/Admin pages wired up behind the router — real content for these is built in the next phases.
+  - Verified end-to-end in a real browser (Playwright): logged-out access to `/` and `/admin` both redirect to `/login`; logging in as the admin lands on the dashboard, shows "Logged in as admin@booksy.com (admin)", and reveals the Admin nav link; logging out returns to `/login`.
 
 ### Known limitation: MVP auth
 
@@ -56,6 +62,15 @@ booksy/
         users.py                # admin-only user creation
     tests/                        # pytest suite for the rental state machine and filters/sort
     requirements.txt
+  frontend/
+    src/
+      main.js, App.vue
+      api/client.js            # fetch wrapper, attaches X-User-Id
+      stores/auth.js            # Pinia auth store (login/logout, localStorage persistence)
+      router/index.js            # routes + auth/admin guards
+      views/
+        LoginView.vue, DashboardView.vue, MyRentalsView.vue, AdminView.vue
+    package.json
   seed.json
   PLAN.md
   README.md
@@ -83,9 +98,18 @@ pytest
 
 Tests run against an isolated in-memory SQLite database (via a `get_db` dependency override) and never touch `backend/booksy.db`.
 
+## Running the frontend
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Starts the Vite dev server at `http://localhost:5173`. It expects the backend running at `http://127.0.0.1:8000` (override via `VITE_API_BASE_URL`). Log in with the bootstrapped admin credentials (or any user created via the admin API).
+
 ## Not built yet
 
-- Admin command center UI and Dashboard/My Rentals UI (the APIs are done; no frontend yet)
-- Frontend (Vue 3 + Vite)
+- Admin command center UI and Dashboard/My Rentals UI content (the APIs are done; the frontend has placeholder pages behind auth for now)
 - Real session/token-based authentication
 - LLM-powered natural-language hardware search (explicitly deferred — see `PLAN.md`)

@@ -12,7 +12,7 @@ from .seed import run_seed
 
 logging.basicConfig(level=logging.INFO)
 
-app = FastAPI(title="Booksy Hardware Rental API")
+app = FastAPI(title="Internal Hardware Rental API")
 
 app.add_middleware(
     CORSMiddleware,
