@@ -1,0 +1,32 @@
+import logging
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from .config import FRONTEND_ORIGIN
+from .routers import auth as auth_router
+from .seed import run_seed
+
+logging.basicConfig(level=logging.INFO)
+
+app = FastAPI(title="Booksy Hardware Rental API")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[FRONTEND_ORIGIN],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.include_router(auth_router.router)
+
+
+@app.on_event("startup")
+def on_startup():
+    run_seed()
+
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
