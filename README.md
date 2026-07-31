@@ -19,12 +19,18 @@ This README is updated as each feature is delivered — see `PLAN.md` for the fu
   - two informational fields present on some seed rows (`assignedTo`, `history`) aren't part of the current schema and are ignored — a hardware item seeded as `in use` is not automatically linked to a rental record
 - **Login (MVP)**: `POST /auth/login` verifies email/password and returns the user's id/email/is_admin.
 - **Admin command center API**:
-  - `GET /hardware` — list all hardware (any authenticated user; no filter/sort yet — coming next phase)
+  - `GET /hardware` — list hardware, with filtering and sorting (any authenticated user; see Dashboard below)
   - `POST /hardware` — create a hardware item (admin only, always starts `available`)
   - `DELETE /hardware/{id}` — delete a hardware item (admin only; blocked with `409` while the item is `in use`)
   - `PATCH /hardware/{id}/repair-toggle` — toggle between `available` and `in repair` (admin only; blocked with `409` while `in use`, so an item can't be pulled for repair out from under the person using it)
   - `PATCH /hardware/{id}/notes` — update an item's notes (admin only)
   - `POST /users` — create a user account with email/password/is_admin (admin only; the only way to gain access to the system; `409` on duplicate email)
+- **Dashboard: filtering & sorting** — `GET /hardware` accepts `status` (`available`/`in use`/`in repair`), `brand` (substring match) and `search` (substring match on name) filters, plus `sort_by` (`name`/`brand`/`purchase_date`/`status`) and `sort_dir` (`asc`/`desc`).
+- **Rental business logic**:
+  - `POST /hardware/{id}/rent` — rent an item (any authenticated user). Uses an atomic conditional DB update (`UPDATE ... WHERE status='available'`) so two simultaneous requests for the same item can't both succeed — the loser gets `409`. Also `409`s for items that are `in use` or `in repair`.
+  - `POST /hardware/{id}/return` — return an item (owner or admin only; `403` otherwise). `409` if the item isn't currently rented.
+  - `GET /rentals/mine` — the current user's open (not yet returned) rentals, with hardware details nested — powers the "My Rentals" tab.
+  - Covered by an automated `pytest` suite (`backend/tests/`) exercising the state machine: rent success, conflicts on already-rented/in-repair items, return success/authorization, and filter/sort behavior.
 
 ### Known limitation: MVP auth
 
@@ -45,8 +51,10 @@ booksy/
       seed.py               # seed.json validation/normalization + admin bootstrap
       routers/
         auth.py               # /auth/login, /auth/logout, /auth/me
-        hardware.py            # hardware CRUD, repair-toggle, notes (admin) + list (any user)
+        hardware.py            # hardware CRUD, repair-toggle, notes (admin) + filtered/sorted list (any user)
+        rentals.py              # rent/return (atomic status guard) + my-rentals
         users.py                # admin-only user creation
+    tests/                        # pytest suite for the rental state machine and filters/sort
     requirements.txt
   seed.json
   PLAN.md
@@ -65,10 +73,19 @@ uvicorn app.main:app --reload
 
 On startup the app creates `backend/booksy.db` (SQLite), bootstraps the admin account, and seeds hardware from `../seed.json`. Interactive API docs are at `http://127.0.0.1:8000/docs`.
 
+Run the test suite with:
+
+```bash
+cd backend
+source .venv/bin/activate
+pytest
+```
+
+Tests run against an isolated in-memory SQLite database (via a `get_db` dependency override) and never touch `backend/booksy.db`.
+
 ## Not built yet
 
-- Admin command center UI (the API from Phase 2 above is done; no frontend yet)
-- Dashboard filtering/sorting and rental (rent/return, my rentals) endpoints/UI
+- Admin command center UI and Dashboard/My Rentals UI (the APIs are done; no frontend yet)
 - Frontend (Vue 3 + Vite)
 - Real session/token-based authentication
 - LLM-powered natural-language hardware search (explicitly deferred — see `PLAN.md`)

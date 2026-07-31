@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from .config import FRONTEND_ORIGIN
 from .routers import auth as auth_router
 from .routers import hardware as hardware_router
+from .routers import rentals as rentals_router
 from .routers import users as users_router
 from .seed import run_seed
 
@@ -23,6 +24,7 @@ app.add_middleware(
 
 app.include_router(auth_router.router)
 app.include_router(hardware_router.router)
+app.include_router(rentals_router.router)
 app.include_router(users_router.router)
 
 

@@ -46,3 +46,12 @@ class HardwareCreate(BaseModel):
 
 class HardwareNotesUpdate(BaseModel):
     notes: Optional[str] = None
+
+
+class RentalOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    rented_at: datetime
+    returned_at: Optional[datetime]
+    hardware: HardwareOut
