@@ -17,22 +17,13 @@
   --font-body: 'Inter', system-ui, 'Segoe UI', Roboto, sans-serif;
 
   font: 16px/145% var(--font-body);
-  color-scheme: light dark;
+  color-scheme: light;
   color: var(--text);
   background: var(--bg);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --text: var(--color-white);
-    --bg: #0b0b0c;
-    --surface: #161618;
-    --border: #2a2a2e;
-  }
 }
 
 body {
@@ -51,9 +42,84 @@ button {
   font-family: var(--font-body);
 }
 
+input,
+select,
+textarea {
+  font-family: var(--font-body);
+}
+
 #app {
   min-height: 100svh;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
+}
+
+.error {
+  color: var(--color-danger);
+  font-size: 0.9rem;
+}
+
+.success {
+  color: var(--color-teal);
+  font-size: 0.9rem;
+}
+
+/* Shared button styles: compose with a color variant, e.g. class="btn btn-primary" */
+.btn {
+  padding: 0.6rem 1.25rem;
+  border-radius: 8px;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+}
+.btn:disabled {
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: var(--color-black);
+  color: var(--color-white);
+}
+.btn-primary:disabled {
+  background: var(--color-gray-200);
+  color: var(--color-gray-500);
+}
+
+.btn-accent {
+  background: var(--color-teal);
+  color: var(--color-black);
+}
+.btn-accent:disabled {
+  background: var(--color-gray-200);
+  color: var(--color-gray-500);
+}
+
+/* Shared table styles: pair with a page-specific class for layout tweaks */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--bg);
+}
+.data-table th,
+.data-table td {
+  text-align: left;
+  padding: 0.9rem 1rem;
+  border-bottom: 1px solid var(--border);
+}
+.data-table th {
+  font-weight: 600;
+  color: var(--color-gray-500);
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+.data-table .actions-col {
+  text-align: right;
+  white-space: nowrap;
+}
+.data-table .empty-row {
+  text-align: center;
+  color: var(--color-gray-500);
+  padding: 2rem;
 }

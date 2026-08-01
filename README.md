@@ -47,6 +47,11 @@ This README is updated as each feature is delivered — see `PLAN.md` for the fu
   - Notes are edited inline: clicking the notes cell turns it into a textarea with Save/Cancel.
   - A "Create User" form (email/password/admin checkbox) calls the admin-only user-creation endpoint and shows a success or error message (e.g. duplicate email).
   - Verified end-to-end in a real browser (Playwright): added and deleted a test device, edited its notes, toggled repair status both directions, confirmed the repair/delete buttons are disabled for an `in use` item, created a user, and confirmed a duplicate email is rejected with a visible error.
+- **Polish pass**:
+  - Fixed a real contrast bug: the page previously followed the OS `prefers-color-scheme`, but only `--text`/`--bg`/`--surface`/`--border` had dark-mode overrides while the gray/status tokens (e.g. the "In Use" badge background) didn't, so a dark-mode visitor would see illegible light-gray-on-white-turned-dark text. Since the whole visual system is an intentionally light black/white/teal brand (not a dual light/dark design), the fix is to pin `color-scheme: light` rather than half-support a broken dark theme. Verified with the browser's color scheme emulated to `dark`: the app still renders correctly in light mode.
+  - De-duplicated CSS across all four views into shared global classes in `src/style.css` (`.btn`/`.btn-primary`/`.btn-accent`, `.data-table`, `.error`/`.success`) instead of every view repeating near-identical button/table rules.
+  - Replaced the default Vite/Vue scaffold favicon with a favicon matching the login page's icon.
+  - Re-verified the full Playwright suite (dashboard filter/sort/rent, my rentals/return, admin CRUD/repair-toggle/notes/user-creation) against the refactored styles — all still pass with no visual regressions.
 
 ### Known limitation: MVP auth
 
@@ -121,6 +126,7 @@ Starts the Vite dev server at `http://localhost:5173`. It expects the backend ru
 
 ## Not built yet
 
-- Real session/token-based authentication
+The full MVP (backend + frontend) described in `PLAN.md` is now complete. What's left is explicitly out of scope for this delivery:
+
+- Real session/token-based authentication (currently the MVP's trusted `X-User-Id` header — see "Known limitation" above)
 - LLM-powered natural-language hardware search (explicitly deferred — see `PLAN.md`)
-- General polish pass (loading/error state consistency, styling refinement) — see `PLAN.md` Phase 7

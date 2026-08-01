@@ -43,7 +43,7 @@ onMounted(loadRentals)
     <p v-if="error" class="error">{{ error }}</p>
     <p v-if="isLoading">Loading…</p>
 
-    <table v-else class="rentals-table">
+    <table v-else class="data-table rentals-table">
       <thead>
         <tr>
           <th>Device Name</th>
@@ -59,7 +59,7 @@ onMounted(loadRentals)
           <td><StatusBadge :status="rental.hardware.status" /></td>
           <td class="actions-col">
             <button
-              class="return-button"
+              class="btn btn-accent return-button"
               :disabled="returningId === rental.id"
               @click="returnItem(rental)"
             >
@@ -78,56 +78,5 @@ onMounted(loadRentals)
 <style scoped>
 .my-rentals h2 {
   margin-bottom: 1.5rem;
-}
-
-.rentals-table {
-  width: 100%;
-  border-collapse: collapse;
-  background: var(--bg);
-}
-
-.rentals-table th,
-.rentals-table td {
-  text-align: left;
-  padding: 0.9rem 1rem;
-  border-bottom: 1px solid var(--border);
-}
-
-.rentals-table th {
-  font-weight: 600;
-  color: var(--color-gray-500);
-  font-size: 0.85rem;
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
-}
-
-.actions-col {
-  text-align: right;
-}
-
-.return-button {
-  padding: 0.5rem 1.25rem;
-  border-radius: 8px;
-  border: none;
-  background: var(--color-teal);
-  color: var(--color-black);
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.return-button:disabled {
-  background: var(--color-gray-200);
-  color: var(--color-gray-500);
-  cursor: not-allowed;
-}
-
-.empty-row {
-  text-align: center;
-  color: var(--color-gray-500);
-  padding: 2rem;
-}
-
-.error {
-  color: var(--color-danger);
 }
 </style>

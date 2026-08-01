@@ -85,7 +85,7 @@ onMounted(loadHardware)
     <p v-if="error" class="error">{{ error }}</p>
     <p v-if="isLoading">Loading…</p>
 
-    <table v-else class="hardware-table">
+    <table v-else class="data-table hardware-table">
       <thead>
         <tr>
           <th @click="toggleSort('name')">Device Name {{ sortIndicator('name') }}</th>
@@ -104,13 +104,13 @@ onMounted(loadHardware)
           <td class="actions-col">
             <button
               v-if="item.status === 'available'"
-              class="rent-button"
+              class="btn btn-primary rent-button"
               :disabled="rentingId === item.id"
               @click="rent(item)"
             >
               {{ rentingId === item.id ? 'Renting…' : 'Rent' }}
             </button>
-            <button v-else class="rent-button" disabled>Rent</button>
+            <button v-else class="btn btn-primary rent-button" disabled>Rent</button>
           </td>
         </tr>
         <tr v-if="hardware.length === 0">
@@ -139,7 +139,6 @@ onMounted(loadHardware)
   border-radius: 8px;
   background: var(--surface);
   color: var(--text);
-  font-family: var(--font-body);
   font-size: 0.95rem;
 }
 
@@ -148,56 +147,8 @@ onMounted(loadHardware)
   max-width: 320px;
 }
 
-.hardware-table {
-  width: 100%;
-  border-collapse: collapse;
-  background: var(--bg);
-}
-
-.hardware-table th,
-.hardware-table td {
-  text-align: left;
-  padding: 0.9rem 1rem;
-  border-bottom: 1px solid var(--border);
-}
-
 .hardware-table th {
   cursor: pointer;
   user-select: none;
-  font-weight: 600;
-  color: var(--color-gray-500);
-  font-size: 0.85rem;
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
-}
-
-.actions-col {
-  text-align: right;
-}
-
-.rent-button {
-  padding: 0.5rem 1.25rem;
-  border-radius: 8px;
-  border: none;
-  background: var(--color-black);
-  color: var(--color-white);
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.rent-button:disabled {
-  background: var(--color-gray-200);
-  color: var(--color-gray-500);
-  cursor: not-allowed;
-}
-
-.empty-row {
-  text-align: center;
-  color: var(--color-gray-500);
-  padding: 2rem;
-}
-
-.error {
-  color: var(--color-danger);
 }
 </style>

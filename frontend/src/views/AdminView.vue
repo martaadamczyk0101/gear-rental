@@ -138,7 +138,7 @@ onMounted(loadHardware)
     <section class="panel">
       <div class="panel-header">
         <h2>Hardware Management</h2>
-        <button class="primary-button" @click="showAddForm = !showAddForm">
+        <button class="btn btn-primary" @click="showAddForm = !showAddForm">
           {{ showAddForm ? 'Cancel' : '+ Add New Device' }}
         </button>
       </div>
@@ -148,7 +148,7 @@ onMounted(loadHardware)
         <input v-model="newHardware.brand" placeholder="Brand" required />
         <input v-model="newHardware.purchase_date" type="date" />
         <input v-model="newHardware.notes" placeholder="Notes (optional)" />
-        <button type="submit" class="primary-button" :disabled="isCreatingHardware">
+        <button type="submit" class="btn btn-primary" :disabled="isCreatingHardware">
           {{ isCreatingHardware ? 'Adding…' : 'Add device' }}
         </button>
       </form>
@@ -156,7 +156,7 @@ onMounted(loadHardware)
       <p v-if="hardwareError" class="error">{{ hardwareError }}</p>
       <p v-if="isLoadingHardware">Loading…</p>
 
-      <table v-else class="admin-table">
+      <table v-else class="data-table admin-table">
         <thead>
           <tr>
             <th>Device Name</th>
@@ -224,7 +224,7 @@ onMounted(loadHardware)
           <input v-model="newUser.is_admin" type="checkbox" />
           Admin
         </label>
-        <button type="submit" class="primary-button" :disabled="isCreatingUser">
+        <button type="submit" class="btn btn-primary" :disabled="isCreatingUser">
           {{ isCreatingUser ? 'Creating…' : 'Create user' }}
         </button>
       </form>
@@ -255,21 +255,6 @@ onMounted(loadHardware)
   margin-bottom: 0;
 }
 
-.primary-button {
-  padding: 0.6rem 1.25rem;
-  border-radius: 8px;
-  border: none;
-  background: var(--color-black);
-  color: var(--color-white);
-  font-weight: 600;
-  cursor: pointer;
-}
-.primary-button:disabled {
-  background: var(--color-gray-200);
-  color: var(--color-gray-500);
-  cursor: not-allowed;
-}
-
 .add-form,
 .user-form {
   display: flex;
@@ -289,7 +274,6 @@ onMounted(loadHardware)
   border-radius: 8px;
   background: var(--bg);
   color: var(--text);
-  font-family: var(--font-body);
 }
 
 .checkbox-label {
@@ -299,30 +283,8 @@ onMounted(loadHardware)
   font-size: 0.9rem;
 }
 
-.admin-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.admin-table th,
 .admin-table td {
-  text-align: left;
-  padding: 0.9rem 1rem;
-  border-bottom: 1px solid var(--border);
   vertical-align: top;
-}
-
-.admin-table th {
-  font-weight: 600;
-  color: var(--color-gray-500);
-  font-size: 0.85rem;
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
-}
-
-.actions-col {
-  text-align: right;
-  white-space: nowrap;
 }
 
 .notes-cell {
@@ -344,7 +306,6 @@ onMounted(loadHardware)
   gap: 0.4rem;
 }
 .notes-edit textarea {
-  font-family: var(--font-body);
   padding: 0.4rem;
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -384,18 +345,5 @@ onMounted(loadHardware)
 }
 .icon-button.danger:hover:not(:disabled) {
   border-color: var(--color-danger);
-}
-
-.empty-row {
-  text-align: center;
-  color: var(--color-gray-500);
-  padding: 2rem;
-}
-
-.error {
-  color: var(--color-danger);
-}
-.success {
-  color: var(--color-teal);
 }
 </style>

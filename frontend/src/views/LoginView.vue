@@ -49,7 +49,7 @@ async function handleSubmit() {
         <input v-model="password" type="password" required />
       </label>
       <p v-if="error" class="error">{{ error }}</p>
-      <button type="submit" :disabled="isSubmitting">
+      <button type="submit" class="btn btn-primary submit-button" :disabled="isSubmitting">
         {{ isSubmitting ? 'Logging in…' : 'Log in' }}
       </button>
     </form>
@@ -106,7 +106,6 @@ label {
 input {
   padding: 0.7rem 0.9rem;
   font-size: 1rem;
-  font-family: var(--font-body);
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--color-gray-50);
@@ -116,24 +115,12 @@ input:focus {
   outline: 2px solid var(--color-teal);
   outline-offset: 1px;
 }
-button {
+.submit-button {
   padding: 0.75rem;
   font-size: 1rem;
-  font-weight: 600;
-  border: none;
-  border-radius: 8px;
-  background: var(--color-black);
-  color: var(--color-white);
-  cursor: pointer;
   margin-top: 0.5rem;
 }
-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
 .error {
-  color: var(--color-danger);
-  font-size: 0.9rem;
   margin: 0;
 }
 </style>
