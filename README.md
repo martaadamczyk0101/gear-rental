@@ -42,6 +42,11 @@ This README is updated as each feature is delivered — see `PLAN.md` for the fu
   - A shared `StatusBadge` component renders the three statuses consistently (`available` / `in use` / `in repair`) across both views.
   - Verified end-to-end in a real browser (Playwright): search, status filter, and both sort directions all return the correct rows; renting an item moves it into "My Rentals" and makes it disappear again after returning; console had zero errors.
 - **Visual design system**: black `#000000` / white `#ffffff` / teal `#05cfa6` (used for the primary highlight/action color, e.g. the Return button and input focus rings), headings in Poppins (extra bold), body text in Inter — a free, metrics-compatible stand-in for Proxima Nova (which requires a commercial license), loaded via Google Fonts in `index.html`. Design tokens live in `src/style.css`. Layout is a left sidebar (nav + current user + logout) with content on the right, based on internal design reference screenshots.
+- **Admin Command Center UI** (`/admin`):
+  - Hardware Management table with an "Add New Device" toggle form (name/brand/purchase date/notes), a wrench icon to toggle repair status, and a trash icon to delete — both icons are disabled (matching the backend's `409` guards) whenever an item is `in use`, so the UI can't even attempt an impossible transition.
+  - Notes are edited inline: clicking the notes cell turns it into a textarea with Save/Cancel.
+  - A "Create User" form (email/password/admin checkbox) calls the admin-only user-creation endpoint and shows a success or error message (e.g. duplicate email).
+  - Verified end-to-end in a real browser (Playwright): added and deleted a test device, edited its notes, toggled repair status both directions, confirmed the repair/delete buttons are disabled for an `in use` item, created a user, and confirmed a duplicate email is rejected with a visible error.
 
 ### Known limitation: MVP auth
 
@@ -75,7 +80,7 @@ booksy/
       router/index.js            # routes + auth/admin guards
       components/StatusBadge.vue
       views/
-        LoginView.vue, DashboardView.vue, MyRentalsView.vue (real), AdminView.vue (placeholder)
+        LoginView.vue, DashboardView.vue, MyRentalsView.vue, AdminView.vue
     package.json
   seed.json
   PLAN.md
@@ -116,6 +121,6 @@ Starts the Vite dev server at `http://localhost:5173`. It expects the backend ru
 
 ## Not built yet
 
-- Admin command center UI (hardware CRUD, repair-toggle, notes, user creation — the API is done; the frontend still has a placeholder page for now)
 - Real session/token-based authentication
 - LLM-powered natural-language hardware search (explicitly deferred — see `PLAN.md`)
+- General polish pass (loading/error state consistency, styling refinement) — see `PLAN.md` Phase 7
