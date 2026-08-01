@@ -35,8 +35,13 @@ This README is updated as each feature is delivered — see `PLAN.md` for the fu
   - Login page (`/login`) that calls `POST /auth/login` and, on success, stores the returned user (id/email/is_admin) in a Pinia store, persisted to `localStorage` so a page refresh doesn't log you out.
   - An API client (`src/api/client.js`) that automatically attaches the `X-User-Id` header to every request based on the logged-in user.
   - Router guards: unauthenticated users are redirected to `/login` (preserving where they were headed, so login lands them back where they intended to go); non-admins are redirected away from `/admin`.
-  - Placeholder Dashboard/My Rentals/Admin pages wired up behind the router — real content for these is built in the next phases.
-  - Verified end-to-end in a real browser (Playwright): logged-out access to `/` and `/admin` both redirect to `/login`; logging in as the admin lands on the dashboard, shows "Logged in as admin@booksy.com (admin)", and reveals the Admin nav link; logging out returns to `/login`.
+- **Dashboard & My Rentals UI**:
+  - Dashboard table (device name, brand, purchase date, status) backed by the filter/sort API: a search box (debounced), a status dropdown, and clickable sortable column headers (with an asc/desc indicator).
+  - A `Rent` button on each available item; unavailable items show a disabled button instead. Renting refreshes the table so status updates immediately.
+  - `My Rentals` page lists the current user's open rentals with a `Return` button; returning refreshes the list.
+  - A shared `StatusBadge` component renders the three statuses consistently (`available` / `in use` / `in repair`) across both views.
+  - Verified end-to-end in a real browser (Playwright): search, status filter, and both sort directions all return the correct rows; renting an item moves it into "My Rentals" and makes it disappear again after returning; console had zero errors.
+- **Visual design system**: black `#000000` / white `#ffffff` / teal `#05cfa6` (used for the primary highlight/action color, e.g. the Return button and input focus rings), headings in Poppins (extra bold), body text in Inter — a free, metrics-compatible stand-in for Proxima Nova (which requires a commercial license), loaded via Google Fonts in `index.html`. Design tokens live in `src/style.css`. Layout is a left sidebar (nav + current user + logout) with content on the right, based on internal design reference screenshots.
 
 ### Known limitation: MVP auth
 
@@ -68,8 +73,9 @@ booksy/
       api/client.js            # fetch wrapper, attaches X-User-Id
       stores/auth.js            # Pinia auth store (login/logout, localStorage persistence)
       router/index.js            # routes + auth/admin guards
+      components/StatusBadge.vue
       views/
-        LoginView.vue, DashboardView.vue, MyRentalsView.vue, AdminView.vue
+        LoginView.vue, DashboardView.vue, MyRentalsView.vue (real), AdminView.vue (placeholder)
     package.json
   seed.json
   PLAN.md
@@ -110,6 +116,6 @@ Starts the Vite dev server at `http://localhost:5173`. It expects the backend ru
 
 ## Not built yet
 
-- Admin command center UI and Dashboard/My Rentals UI content (the APIs are done; the frontend has placeholder pages behind auth for now)
+- Admin command center UI (hardware CRUD, repair-toggle, notes, user creation — the API is done; the frontend still has a placeholder page for now)
 - Real session/token-based authentication
 - LLM-powered natural-language hardware search (explicitly deferred — see `PLAN.md`)

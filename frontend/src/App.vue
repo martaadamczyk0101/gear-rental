@@ -12,38 +12,88 @@ async function handleLogout() {
 </script>
 
 <template>
-  <nav v-if="authStore.isAuthenticated" class="navbar">
-    <RouterLink to="/">Dashboard</RouterLink>
-    <RouterLink to="/my-rentals">My Rentals</RouterLink>
-    <RouterLink v-if="authStore.isAdmin" to="/admin">Admin</RouterLink>
-    <span class="spacer" />
-    <span>{{ authStore.user.email }}</span>
-    <button @click="handleLogout">Log out</button>
-  </nav>
-  <main>
-    <RouterView />
-  </main>
+  <div v-if="authStore.isAuthenticated" class="layout">
+    <aside class="sidebar">
+      <div class="brand">Hardware Manager</div>
+      <nav class="nav-links">
+        <RouterLink to="/">Dashboard</RouterLink>
+        <RouterLink to="/my-rentals">My Rentals</RouterLink>
+        <RouterLink v-if="authStore.isAdmin" to="/admin">Admin Panel</RouterLink>
+      </nav>
+      <div class="sidebar-footer">
+        <span class="user-email">{{ authStore.user.email }}</span>
+        <button class="logout-button" @click="handleLogout">Log out</button>
+      </div>
+    </aside>
+    <main class="content">
+      <RouterView />
+    </main>
+  </div>
+  <RouterView v-else />
 </template>
 
 <style scoped>
-.navbar {
+.layout {
   display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 1rem;
-  border-bottom: 1px solid #ddd;
+  min-height: 100vh;
 }
-.navbar a {
+.sidebar {
+  width: 240px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  padding: 1.5rem 1rem;
+}
+.brand {
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: 1.15rem;
+  padding: 0 0.75rem 1.5rem;
+}
+.nav-links {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.nav-links a {
   text-decoration: none;
-  color: inherit;
+  color: var(--text);
+  padding: 0.65rem 0.75rem;
+  border-radius: 8px;
+  font-weight: 500;
 }
-.navbar a.router-link-exact-active {
-  font-weight: bold;
+.nav-links a.router-link-exact-active {
+  background: var(--color-gray-100);
+  font-weight: 700;
 }
-.spacer {
+.sidebar-footer {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border-top: 1px solid var(--border);
+}
+.user-email {
+  font-size: 0.85rem;
+  color: var(--color-gray-500);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.logout-button {
+  padding: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  cursor: pointer;
+  font-weight: 600;
+}
+.content {
   flex: 1;
-}
-main {
-  padding: 1.5rem;
+  padding: 2rem;
+  overflow-x: auto;
 }
 </style>
