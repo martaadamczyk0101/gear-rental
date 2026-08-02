@@ -116,6 +116,7 @@ booksy/
     tests/                        # pytest suite for the rental state machine, approval workflow, filters/sort, and semantic search
     requirements.txt
     .env.example                    # template for local secrets (copy to .env, gitignored)
+    Dockerfile                        # builds from the repo root as context - see "Deploying to Railway"
   frontend/
     src/
       main.js, App.vue
@@ -129,6 +130,7 @@ booksy/
   seed.json
   PLAN.md
   README.md
+  .dockerignore                       # scoped to the backend Docker build (repo-root context)
 ```
 
 ## Running the backend
@@ -172,6 +174,37 @@ npm run dev
 ```
 
 Starts the Vite dev server at `http://localhost:5173`. It expects the backend running at `http://127.0.0.1:8000` (override via `VITE_API_BASE_URL`). Log in with the bootstrapped admin credentials (or any user created via the admin API).
+
+## Deploying to Railway
+
+Two Railway services, one repo:
+
+- **Backend** builds from `backend/Dockerfile`. It's a Dockerfile (not Nixpacks) specifically so the build context stays the *repo root* rather than getting scoped to `backend/` — the app needs `seed.json`, which lives one level above `backend/`, and Railway's per-service "Root Directory" setting only clones that subdirectory, not its siblings.
+- **Frontend** builds with Railway's normal Nixpacks flow, scoped to `frontend/` (it's self-contained, so directory-scoping is fine). `npm run build` produces `dist/`, then `npm run start` (added to `package.json`) serves it via `vite preview`.
+
+SQLite persistence: Railway's filesystem is ephemeral between deploys, so the DB needs to live on a mounted volume, not the container's own disk — see step 5 below.
+
+### Steps
+
+1. **Push this repo to GitHub** (Railway deploys from a GitHub repo).
+2. **Create a Railway project**, then add the backend service: "Deploy from GitHub repo" → select this repo → in the service's Settings:
+   - Leave **Root Directory** unset (must stay at repo root — see above).
+   - Set **Config-as-code / Dockerfile Path** (or the `RAILWAY_DOCKERFILE_PATH` env var) to `backend/Dockerfile`.
+3. **Add environment variables** on the backend service (Settings → Variables):
+   - `BOOKSY_ADMIN_EMAIL`, `BOOKSY_ADMIN_PASSWORD` — real admin credentials (don't ship with the `admin123` dev default).
+   - `ANTHROPIC_API_KEY` (and optionally `ANTHROPIC_SEARCH_MODEL`) — for semantic search.
+   - `BOOKSY_FRONTEND_ORIGIN` — the frontend's public Railway URL (set this after step 6, once you know it; CORS will 403 until it's correct).
+   - `BOOKSY_DATABASE_PATH` — `/data/booksy.db` (matches the volume mount path in the next step).
+4. Railway auto-injects `PORT`; the Dockerfile's `CMD` already binds to it — no action needed.
+5. **Add a Volume** to the backend service (Settings → Volumes), mounted at `/data`. Without this, `booksy.db` lives on the container's ephemeral disk and every redeploy silently resets the database back to the seed data.
+6. **Add the frontend service**: same repo, but this time set **Root Directory** to `frontend`. Railway's Nixpacks build auto-detects `npm run build` / `npm run start`.
+7. **Set the frontend's env var**: `VITE_API_BASE_URL` = the backend service's public Railway URL (e.g. `https://booksy-backend-production.up.railway.app`). This is baked in at *build* time, so set it before the first deploy (or trigger a redeploy after adding it).
+8. Once both services have public URLs, go back and set the backend's `BOOKSY_FRONTEND_ORIGIN` to the frontend's URL (step 3), and redeploy the backend so CORS picks it up.
+9. Visit the frontend URL and log in with the `BOOKSY_ADMIN_EMAIL` / `BOOKSY_ADMIN_PASSWORD` you set in step 3.
+
+### Known limitation: this only supports one frontend origin
+
+`BOOKSY_FRONTEND_ORIGIN` (and the backend's CORS config) is a single value, matching the MVP auth model documented above. If you later attach a custom domain to the frontend, you'd need to either switch it to that domain or extend the backend to accept a list of allowed origins.
 
 ## Not built yet
 

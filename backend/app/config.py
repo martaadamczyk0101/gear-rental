@@ -8,7 +8,7 @@ PROJECT_ROOT = BACKEND_DIR.parent
 
 load_dotenv(BACKEND_DIR / ".env")
 
-DATABASE_PATH = BACKEND_DIR / "booksy.db"
+DATABASE_PATH = Path(os.environ.get("BOOKSY_DATABASE_PATH", str(BACKEND_DIR / "booksy.db")))
 DATABASE_URL = f"sqlite:///{DATABASE_PATH}"
 
 SEED_FILE = PROJECT_ROOT / "seed.json"
