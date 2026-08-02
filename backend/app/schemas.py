@@ -1,9 +1,9 @@
 from datetime import date, datetime
-from typing import Optional
+from typing import Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, EmailStr
 
-from .models import HardwareStatus
+from .models import HardwareStatus, RentalRequestStatus
 
 
 class LoginRequest(BaseModel):
@@ -55,3 +55,19 @@ class RentalOut(BaseModel):
     rented_at: datetime
     returned_at: Optional[datetime]
     hardware: HardwareOut
+
+
+class RentActionResult(BaseModel):
+    outcome: Literal["rented", "requested"]
+    hardware: HardwareOut
+
+
+class RentalRequestOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    status: RentalRequestStatus
+    requested_at: datetime
+    decided_at: Optional[datetime]
+    hardware: HardwareOut
+    user: UserOut

@@ -14,6 +14,12 @@ class HardwareStatus(str, enum.Enum):
     IN_REPAIR = "in repair"
 
 
+class RentalRequestStatus(str, enum.Enum):
+    PENDING = "pending"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+
+
 class User(Base):
     __tablename__ = "users"
 
@@ -54,3 +60,22 @@ class Rental(Base):
 
     hardware = relationship("Hardware", back_populates="rentals")
     user = relationship("User", back_populates="rentals")
+
+
+class RentalRequest(Base):
+    __tablename__ = "rental_requests"
+
+    id = Column(Integer, primary_key=True)
+    hardware_id = Column(Integer, ForeignKey("hardware.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    status = Column(
+        SQLEnum(RentalRequestStatus, values_callable=lambda e: [m.value for m in e]),
+        nullable=False,
+        default=RentalRequestStatus.PENDING,
+    )
+    requested_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    decided_at = Column(DateTime, nullable=True)
+    decided_by_user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+
+    hardware = relationship("Hardware", foreign_keys=[hardware_id])
+    user = relationship("User", foreign_keys=[user_id])

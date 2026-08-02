@@ -27,10 +27,19 @@ This README is updated as each feature is delivered — see `PLAN.md` for the fu
   - `POST /users` — create a user account with email/password/is_admin (admin only; the only way to gain access to the system; `409` on duplicate email)
 - **Dashboard: filtering & sorting** — `GET /hardware` accepts `status` (`available`/`in use`/`in repair`), `brand` (substring match) and `search` (substring match on name) filters, plus `sort_by` (`name`/`brand`/`purchase_date`/`status`) and `sort_dir` (`asc`/`desc`).
 - **Rental business logic**:
-  - `POST /hardware/{id}/rent` — rent an item (any authenticated user). Uses an atomic conditional DB update (`UPDATE ... WHERE status='available'`) so two simultaneous requests for the same item can't both succeed — the loser gets `409`. Also `409`s for items that are `in use` or `in repair`.
+  - `POST /hardware/{id}/rent` — admin callers rent immediately (atomic conditional DB update, `UPDATE ... WHERE status='available'`, so two simultaneous requests for the same item can't both succeed — the loser gets `409`); everyone else's call now goes through the request/approval workflow below instead of renting directly. Always `409`s for items that are `in use` or `in repair`.
   - `POST /hardware/{id}/return` — return an item (owner or admin only; `403` otherwise). `409` if the item isn't currently rented.
   - `GET /rentals/mine` — the current user's open (not yet returned) rentals, with hardware details nested — powers the "My Rentals" tab.
-  - Covered by an automated `pytest` suite (`backend/tests/`) exercising the state machine: rent success, conflicts on already-rented/in-repair items, return success/authorization, and filter/sort behavior.
+  - Covered by an automated `pytest` suite (`backend/tests/`) exercising the state machine: admin instant-rent, conflicts on already-rented/in-repair items, return success/authorization, and filter/sort behavior.
+- **Rental request/approval workflow** (`PLAN.md` Part 3, backend only so far):
+  - When a non-admin calls `POST /hardware/{id}/rent`, instead of renting immediately it creates a `RentalRequest` (`pending`) and leaves the hardware `available` — multiple users can hold pending requests for the same item at once. The response shape changed to `{"outcome": "rented" | "requested", "hardware": {...}}` so callers can tell the two paths apart. A user can't submit a second pending request for the same item (`409`).
+  - `GET /rental-requests` (admin only, `?status=pending|approved|rejected`, defaults to `pending`) — list requests with nested hardware + requester info.
+  - `GET /rental-requests/pending-count` (admin only) — `{"pending": N}`, meant to drive a sidebar badge (not wired into the UI yet).
+  - `POST /rental-requests/{id}/approve` (admin only) — re-runs the same atomic conditional update used by the direct-rent path (so it can't double-book against a race), creates the `Rental`, and **auto-rejects every other still-pending request for the same hardware** in the same transaction — this is what makes competing requests for one item "unavailable to accept" once one is approved. `409` if the item became unavailable in the meantime, or if the request was already decided.
+  - `POST /rental-requests/{id}/reject` (admin only) — manual rejection; `409` if already decided.
+  - `GET /rental-requests/mine` (any authenticated user) — the caller's own pending requests.
+  - Covered by two `pytest` files: `test_rentals.py` (admin-vs-user branching, duplicate-request guard, two users holding simultaneous pending requests) and `test_rental_requests.py` (list/count/approve/reject, the sibling-auto-rejection scenario, the race-guard on approve, already-decided guard, 404/403 authorization). Verified live end-to-end: two users request the same item, hardware stays `available`, approving one flips it to `in use` and the sibling request both disappears from the pending queue and 409s if approval is attempted anyway.
+  - **Not built yet**: the frontend side of this (toast on submit, disabled "Requested" state on the Dashboard, the admin panel's Rental Requests section, the sidebar badge) — see `PLAN.md` Part 3.
 - **Frontend foundation**:
   - Login page (`/login`) that calls `POST /auth/login` and, on success, stores the returned user (id/email/is_admin) in a Pinia store, persisted to `localStorage` so a page refresh doesn't log you out.
   - An API client (`src/api/client.js`) that automatically attaches the `X-User-Id` header to every request based on the logged-in user.
@@ -73,7 +82,7 @@ booksy/
       main.py        # FastAPI app, CORS, startup seeding
       config.py       # env-driven settings
       database.py      # SQLAlchemy engine/session
-      models.py         # User, Hardware, Rental
+      models.py         # User, Hardware, Rental, RentalRequest
       schemas.py         # Pydantic request/response models
       auth.py             # password hashing + MVP auth dependency
       seed.py               # seed.json validation/normalization + admin bootstrap
@@ -81,10 +90,11 @@ booksy/
       routers/
         auth.py               # /auth/login, /auth/logout, /auth/me
         hardware.py            # hardware CRUD, repair-toggle, notes (admin) + filtered/sorted list (any user)
-        rentals.py              # rent/return (atomic status guard) + my-rentals
+        rentals.py              # rent/return (atomic status guard, admin-vs-user branching) + my-rentals
+        rental_requests.py        # request/approve/reject workflow (list, pending-count, mine)
         search.py                # /hardware/semantic-search (LLM natural-language search)
         users.py                # admin-only user creation
-    tests/                        # pytest suite for the rental state machine, filters/sort, and semantic search
+    tests/                        # pytest suite for the rental state machine, approval workflow, filters/sort, and semantic search
     requirements.txt
     .env.example                    # template for local secrets (copy to .env, gitignored)
   frontend/
@@ -146,6 +156,8 @@ Starts the Vite dev server at `http://localhost:5173`. It expects the backend ru
 
 ## Not built yet
 
-The full MVP (backend + frontend, `PLAN.md` Phases 1–7) and the semantic search feature (`PLAN.md` Part 2, Phase 8) are built and live-verified. What's left:
+The full MVP (backend + frontend, `PLAN.md` Phases 1–7) and the semantic search feature (`PLAN.md` Part 2, Phase 8) are built and live-verified. Part 3 (`PLAN.md`) is in progress:
 
 - Real session/token-based authentication (currently the MVP's trusted `X-User-Id` header — see "Known limitation" above)
+- Rental approval workflow: **backend done** (see above); frontend still needed — the submit toast, the Dashboard's disabled "Requested" button state, the admin panel's Rental Requests section, and the sidebar pending-count badge
+- Admin UI polish from `PLAN.md` Part 3: Add Device/Create User modals, the hardware Edit action, future-purchase-date validation, fixed-width status pills, and filter/sort/search on the admin hardware table
