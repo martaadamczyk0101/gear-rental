@@ -6,7 +6,7 @@ This README is updated as each feature is delivered — see `PLAN.md` for the fu
 
 ## Tech Stack
 
-- **Backend**: Python, FastAPI, SQLAlchemy, SQLite
+- **Backend**: Python, FastAPI, SQLAlchemy, SQLite, `anthropic` SDK (Claude Sonnet 5) for semantic search
 - **Frontend**: Vue 3 + Vite, Pinia (state), Vue Router
 
 ## Features implemented so far
@@ -52,6 +52,13 @@ This README is updated as each feature is delivered — see `PLAN.md` for the fu
   - De-duplicated CSS across all four views into shared global classes in `src/style.css` (`.btn`/`.btn-primary`/`.btn-accent`, `.data-table`, `.error`/`.success`) instead of every view repeating near-identical button/table rules.
   - Replaced the default Vite/Vue scaffold favicon with a favicon matching the login page's icon.
   - Re-verified the full Playwright suite (dashboard filter/sort/rent, my rentals/return, admin CRUD/repair-toggle/notes/user-creation) against the refactored styles — all still pass with no visual regressions.
+- **LLM-powered semantic search** (Part 2 of `PLAN.md`):
+  - `GET /hardware/semantic-search?q=<query>` (any authenticated user) sends the natural-language query plus the *full* current inventory (id/name/brand/purchase_date/notes/status — every field the model might need to reason about) to Claude (`claude-sonnet-5` via the `anthropic` SDK, `backend/app/llm.py`), using **Structured Outputs** (`output_format`) so the response is a guaranteed-parseable `{"matching_ids": [...]}` — no free-text parsing. Searches the whole inventory regardless of status; it's a discovery tool, not a rent-only shortcut.
+  - Fails gracefully: `422` on an empty/missing query, `503` ("Semantic search is temporarily unavailable — try the filters instead") if `ANTHROPIC_API_KEY` isn't set or the Anthropic API errors — the rest of the dashboard keeps working either way.
+  - Dashboard UI: an "Ask AI…" box above the regular filters, submitted on Enter/click (not per-keystroke, since each submission is a billed API call). Shows AI-matched results in the same table/styling, with a "back to browsing" link to return to the normal filtered/sorted view.
+  - Covered by `pytest` with a mocked Claude client (empty query, missing key, API error, successful match, and a dedicated regression test asserting `purchase_date`/`brand`/`notes` are actually present in the payload sent to the model — no real API calls in the test suite).
+  - Verified live against the real Anthropic API with a real key: "devices purchased before 2023" correctly returns exactly the 6 items dated 2021–2022 (excluding the 2023 item, a future-dated 2027 item, and one item with no purchase date on file); "something to test a mobile app on" returns the phones/tablets; a bluetooth-headphones query returns the headphones.
+  - **Fixed bug**: an early version built the inventory payload with only `id`/`name`/`brand`/`notes`/`status` — `purchase_date` was silently omitted, so any date-based query (e.g. "purchased before 2023") had no way to match, regardless of prompt wording. Fixed by including `purchase_date` in the payload and updating the system prompt to explicitly call out date-based reasoning.
 
 ### Known limitation: MVP auth
 
@@ -70,13 +77,16 @@ booksy/
       schemas.py         # Pydantic request/response models
       auth.py             # password hashing + MVP auth dependency
       seed.py               # seed.json validation/normalization + admin bootstrap
+      llm.py                  # Anthropic client wrapper for semantic search (structured output)
       routers/
         auth.py               # /auth/login, /auth/logout, /auth/me
         hardware.py            # hardware CRUD, repair-toggle, notes (admin) + filtered/sorted list (any user)
         rentals.py              # rent/return (atomic status guard) + my-rentals
+        search.py                # /hardware/semantic-search (LLM natural-language search)
         users.py                # admin-only user creation
-    tests/                        # pytest suite for the rental state machine and filters/sort
+    tests/                        # pytest suite for the rental state machine, filters/sort, and semantic search
     requirements.txt
+    .env.example                    # template for local secrets (copy to .env, gitignored)
   frontend/
     src/
       main.js, App.vue
@@ -112,7 +122,17 @@ source .venv/bin/activate
 pytest
 ```
 
-Tests run against an isolated in-memory SQLite database (via a `get_db` dependency override) and never touch `backend/booksy.db`.
+Tests run against an isolated in-memory SQLite database (via a `get_db` dependency override) and never touch `backend/booksy.db`. The semantic-search tests mock the Anthropic client, so the suite never makes a real API call or needs a key.
+
+### Enabling semantic search
+
+The "Ask AI…" hardware search needs a real Anthropic API key:
+
+1. Get one from [console.anthropic.com](https://console.anthropic.com) (Settings → API Keys). API usage is billed separately from any Claude.ai plan.
+2. Copy `backend/.env.example` to `backend/.env` (already done for local dev — just edit `backend/.env`) and fill in `ANTHROPIC_API_KEY=sk-ant-...`. `backend/.env` is gitignored and loaded automatically on startup via `python-dotenv` — never commit it.
+3. Optionally override the model via `ANTHROPIC_SEARCH_MODEL` in the same file (defaults to `claude-sonnet-5`).
+
+Without a key set, `/hardware/semantic-search` responds `503` with a friendly message — the rest of the app is unaffected.
 
 ## Running the frontend
 
@@ -126,7 +146,6 @@ Starts the Vite dev server at `http://localhost:5173`. It expects the backend ru
 
 ## Not built yet
 
-The full MVP (backend + frontend) described in `PLAN.md` is now complete. What's left is explicitly out of scope for this delivery:
+The full MVP (backend + frontend, `PLAN.md` Phases 1–7) and the semantic search feature (`PLAN.md` Part 2, Phase 8) are built and live-verified. What's left:
 
 - Real session/token-based authentication (currently the MVP's trusted `X-User-Id` header — see "Known limitation" above)
-- LLM-powered natural-language hardware search (explicitly deferred — see `PLAN.md`)

@@ -76,3 +76,50 @@ Created in Phase 1 with: project overview, tech stack, feature list, setup/run i
 
 - Backend: FastAPI's `/docs` Swagger UI for manual endpoint checks; `pytest` suite for the rental state-machine and auth/authorization guards (the correctness-critical logic called out in the requirements).
 - Frontend: manual click-through in the browser (login → dashboard filter/sort → rent/return → My Rentals → Admin CRUD), since this is a UI-driven deliverable.
+
+---
+
+# Part 2 — LLM Semantic Search Integration
+
+## Context
+
+The MVP (Phases 1–7 above) is complete. This part covers the natural-language hardware search the user wants next: a user types something like *"I need something to test a mobile app on"* and gets back relevant items (iPhones, Android devices) even though none of those words appear in the hardware's name/brand/notes fields. This requires an LLM to bridge the gap between intent and inventory — plain substring search (already built in Phase 3/5) can't do this.
+
+Decisions confirmed with the user:
+- **Model**: `claude-sonnet-5`, via the official `anthropic` Python SDK. This deliberately departs from Anthropic's own default guidance (which is to use `claude-opus-5` for new integrations unless told otherwise) — this feature fires on every search submission from an interactive UI, so per-query latency and cost matter more here than they would for a one-off task, and Sonnet 5 comfortably handles a straightforward "match this need to these ~10 items" classification job. The user chose Sonnet 5 over the faster/cheaper Haiku 4.5 option for extra reasoning headroom on ambiguous queries.
+- **Approach**: a single non-streaming Claude API call per search, using **Structured Outputs** (`output_config.format`, via `client.messages.parse()`) to force a guaranteed-parseable `{"matching_ids": [...]}` response — not a vector database / embeddings pipeline. The inventory is small (dozens of items), so sending the full list as context on every query is simpler and cheap enough; embeddings would be premature infrastructure at this scale and can be revisited if the catalog grows much larger.
+- **Scope**: semantic search runs against the *entire* inventory regardless of status (available/in use/in repair) — it's a discovery tool ("what do we own that fits this need"), not a shortcut that only surfaces rentable items. The existing status filter and the rent button already handle availability once the user sees the results.
+
+## Architecture
+
+- **New backend module** `backend/app/llm.py`: a thin wrapper around `anthropic.Anthropic()`. Builds the prompt (system instructions + the query + the current inventory as JSON), calls `client.messages.parse()` with a Pydantic output model `HardwareMatch(BaseModel): matching_ids: list[int]`, and returns the parsed list of ids. Raises a specific `SemanticSearchUnavailable` exception if `ANTHROPIC_API_KEY` isn't configured, so the router can turn that into a clean error response instead of a 500 crash.
+- **New endpoint** `GET /hardware/semantic-search?q=<query>` (any authenticated user, new `routers/search.py`):
+  1. Reject an empty/missing `q` with `400`.
+  2. Load the full hardware inventory (id, name, brand, notes, status) — no status filter.
+  3. Call `app/llm.py` to get back matching ids.
+  4. Look up those rows and return them via the existing `HardwareOut` schema, in the order Claude returned the ids (an implicit relevance ranking).
+  5. On `SemanticSearchUnavailable` or any Anthropic API error/timeout, return `503` with a message like "Semantic search is temporarily unavailable — try the filters instead" — the rest of the dashboard must keep working even if this feature is down.
+- **Config additions** (`app/config.py`): `ANTHROPIC_API_KEY` (no default — required for the feature to work at all) and `ANTHROPIC_SEARCH_MODEL` (defaults to `claude-sonnet-5`, overridable without a code change).
+- **Frontend**: an "Ask AI…" input added to the Dashboard (matching the sparkle-icon mockup), visually separate from the existing status/search filter row. Submits on Enter or a button click — **not** on every keystroke like the existing debounced substring search, since each submission is a billed API call. While showing AI results: reuse the existing `.data-table`/`StatusBadge` styling, show a loading state (the call can take a couple of seconds), and offer a "Clear" action to return to the normal filter/sort view. The existing deterministic filter/sort controls are untouched and remain the fast default path; the AI box is an alternate, opt-in way to populate the same table.
+
+## Prompt Design
+
+- **System prompt**: instructs Claude to act as a hardware-matching assistant — given a natural-language need and a JSON inventory list (id/name/brand/notes/status), return the ids of items that would satisfy that need, using both explicit device-type matches and general domain knowledge (e.g., "mobile app testing" implies phones/tablets); return an empty list if nothing is relevant; never invent an id that isn't in the provided list.
+- **User content**: the raw query plus the serialized inventory JSON.
+- **Structured output schema**: `{"type": "object", "properties": {"matching_ids": {"type": "array", "items": {"type": "integer"}}}, "required": ["matching_ids"], "additionalProperties": false}`, requested via `output_config.format` so the response is guaranteed valid JSON — no free-text parsing.
+
+## Testing Strategy
+
+- `pytest`: monkeypatch `app.llm.find_matching_ids` so the test suite never calls the real Anthropic API (no cost, no network flakiness in CI). Covers: empty query → `400`; missing API key → `503`; a mocked successful match → correct hardware rows returned in the right order.
+- Live verification (manual + Playwright) requires a real `ANTHROPIC_API_KEY` and will run once implemented, using a few realistic queries (e.g. "something to test a mobile app on" → phones/tablets, "I need a laptop for a client presentation" → laptops, "I need to check whether the issue with the app also occurs when using bluetooth headphones → bluetooth headphones) to sanity-check real-world relevance.
+
+## Known Limitations / Explicitly Deferred
+
+- No caching of repeated/identical queries — fine at this traffic scale; revisit if usage grows.
+- No rate limiting on the endpoint — internal tool with a small trusted user base; add if it becomes a cost concern.
+- No embeddings/vector database — acceptable while the catalog stays in the dozens-to-low-hundreds of items; would need a different architecture (embedding index, similarity search) if the inventory grows much larger.
+
+## Delivery Phase
+
+8. **Semantic search** — `backend/app/llm.py` (Anthropic client wrapper + structured-output prompt), `GET /hardware/semantic-search` endpoint, and an "Ask AI…" search box on the Dashboard.
+   - *Verify*: `pytest` suite with a mocked Claude client covering the error paths (missing key, empty query) and a mocked success path; live check with 2–3 realistic natural-language queries against the real API once an `ANTHROPIC_API_KEY` is available.

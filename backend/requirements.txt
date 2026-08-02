@@ -6,3 +6,5 @@ email-validator==2.2.0
 bcrypt==4.2.1
 pytest==8.3.4
 httpx==0.28.1
+anthropic==0.120.2
+python-dotenv==1.0.1
