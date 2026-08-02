@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from ..auth import get_current_user, require_admin
 from ..database import get_db
 from ..models import Hardware, HardwareStatus
-from ..schemas import HardwareCreate, HardwareNotesUpdate, HardwareOut
+from ..schemas import HardwareCreate, HardwareOut, HardwareUpdate
 
 router = APIRouter(prefix="/hardware", tags=["hardware"])
 
@@ -105,15 +105,16 @@ def toggle_repair_status(
     return hardware
 
 
-@router.patch("/{hardware_id}/notes", response_model=HardwareOut)
-def update_notes(
+@router.patch("/{hardware_id}", response_model=HardwareOut)
+def update_hardware(
     hardware_id: int,
-    payload: HardwareNotesUpdate,
+    payload: HardwareUpdate,
     db: Session = Depends(get_db),
     _admin=Depends(require_admin),
 ):
     hardware = get_hardware_or_404(db, hardware_id)
-    hardware.notes = payload.notes
+    for field, value in payload.model_dump(exclude_unset=True).items():
+        setattr(hardware, field, value)
     db.commit()
     db.refresh(hardware)
     return hardware

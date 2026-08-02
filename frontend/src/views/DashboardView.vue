@@ -2,11 +2,17 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { apiClient, ApiError } from '../api/client'
 import StatusBadge from '../components/StatusBadge.vue'
+import IconSearch from '../components/icons/IconSearch.vue'
+import IconSparkle from '../components/icons/IconSparkle.vue'
+import { useToastStore } from '../stores/toast'
+
+const toastStore = useToastStore()
 
 const hardware = ref([])
 const isLoading = ref(true)
 const error = ref('')
 const rentingId = ref(null)
+const myPendingRequestHardwareIds = ref(new Set())
 
 const statusFilter = ref('')
 const searchTerm = ref('')
@@ -36,6 +42,15 @@ async function loadHardware() {
   }
 }
 
+async function loadMyPendingRequests() {
+  try {
+    const requests = await apiClient.get('/rental-requests/mine')
+    myPendingRequestHardwareIds.value = new Set(requests.map((request) => request.hardware.id))
+  } catch {
+    // Non-critical - worst case the "Requested" disabled state doesn't show.
+  }
+}
+
 function toggleSort(column) {
   if (aiActive.value) return
   if (sortBy.value === column) {
@@ -55,7 +70,13 @@ async function rent(item) {
   rentingId.value = item.id
   error.value = ''
   try {
-    await apiClient.post(`/hardware/${item.id}/rent`)
+    const result = await apiClient.post(`/hardware/${item.id}/rent`)
+    toastStore.show(
+      result.outcome === 'rented'
+        ? `Rented ${item.name}.`
+        : `Rental request submitted for ${item.name}.`,
+    )
+    await loadMyPendingRequests()
     if (aiActive.value) {
       await runAiSearch()
     } else {
@@ -98,17 +119,20 @@ watch(searchTerm, () => {
   searchDebounce = setTimeout(loadHardware, 300)
 })
 
-onMounted(loadHardware)
+onMounted(() => {
+  loadHardware()
+  loadMyPendingRequests()
+})
 </script>
 
 <template>
   <div class="dashboard">
     <div class="header-row">
-      <h2>Hardware Dashboard</h2>
+      <h2>Hardware List</h2>
     </div>
 
     <form class="ai-search" @submit.prevent="runAiSearch">
-      <span class="ai-icon">🔍</span>
+      <span class="ai-icon"><IconSearch :size="18" /></span>
       <input
         v-model="aiQuery"
         type="text"
@@ -124,7 +148,8 @@ onMounted(loadHardware)
         Clear
       </button>
       <button type="submit" class="ai-submit-button" :disabled="isAiSearching || !aiQuery.trim()">
-        {{ isAiSearching ? 'Searching…' : '✨' }}
+        <span v-if="isAiSearching">Searching…</span>
+        <IconSparkle v-else :size="18" />
       </button>
     </form>
     <p v-if="aiError" class="error">{{ aiError }}</p>
@@ -163,12 +188,15 @@ onMounted(loadHardware)
           <td><StatusBadge :status="item.status" /></td>
           <td class="actions-col">
             <button
-              v-if="item.status === 'available'"
+              v-if="item.status === 'available' && !myPendingRequestHardwareIds.has(item.id)"
               class="btn btn-primary rent-button"
               :disabled="rentingId === item.id"
               @click="rent(item)"
             >
               {{ rentingId === item.id ? 'Renting…' : 'Rent' }}
+            </button>
+            <button v-else-if="myPendingRequestHardwareIds.has(item.id)" class="btn btn-primary rent-button" disabled>
+              Requested
             </button>
             <button v-else class="btn btn-primary rent-button" disabled>Rent</button>
           </td>
@@ -204,6 +232,10 @@ onMounted(loadHardware)
   font-size: 0.95rem;
 }
 
+.status-select {
+  padding-right: 2rem;
+}
+
 .search-input {
   flex: 1;
   max-width: 320px;
@@ -226,6 +258,8 @@ onMounted(loadHardware)
 }
 
 .ai-icon {
+  display: flex;
+  align-items: center;
   color: var(--color-gray-500);
 }
 
@@ -239,9 +273,11 @@ onMounted(loadHardware)
 }
 
 .ai-submit-button {
+  display: flex;
+  align-items: center;
   border: none;
   background: none;
-  font-size: 1.2rem;
+  font-size: 0.9rem;
   line-height: 1;
   cursor: pointer;
   color: var(--color-teal);

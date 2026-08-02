@@ -21,12 +21,15 @@ const LABELS = {
 
 <style scoped>
 .badge {
+  box-sizing: border-box;
   display: inline-block;
-  padding: 0.3rem 0.75rem;
+  width: 80px;
+  padding: 0.3rem 0.4rem;
   border-radius: 999px;
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   font-weight: 600;
   white-space: nowrap;
+  text-align: center;
 }
 
 .badge--available {

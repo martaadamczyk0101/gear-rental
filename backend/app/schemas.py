@@ -1,9 +1,15 @@
 from datetime import date, datetime
 from typing import Literal, Optional
 
-from pydantic import BaseModel, ConfigDict, EmailStr
+from pydantic import BaseModel, ConfigDict, EmailStr, field_validator
 
 from .models import HardwareStatus, RentalRequestStatus
+
+
+def _reject_future_purchase_date(value: Optional[date]) -> Optional[date]:
+    if value is not None and value > date.today():
+        raise ValueError("purchase_date cannot be in the future")
+    return value
 
 
 class LoginRequest(BaseModel):
@@ -43,9 +49,16 @@ class HardwareCreate(BaseModel):
     purchase_date: Optional[date] = None
     notes: Optional[str] = None
 
+    _validate_purchase_date = field_validator("purchase_date")(_reject_future_purchase_date)
 
-class HardwareNotesUpdate(BaseModel):
+
+class HardwareUpdate(BaseModel):
+    name: Optional[str] = None
+    brand: Optional[str] = None
+    purchase_date: Optional[date] = None
     notes: Optional[str] = None
+
+    _validate_purchase_date = field_validator("purchase_date")(_reject_future_purchase_date)
 
 
 class RentalOut(BaseModel):
