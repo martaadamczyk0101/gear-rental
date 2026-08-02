@@ -280,7 +280,7 @@ onMounted(() => {
   font-size: 0.9rem;
   line-height: 1;
   cursor: pointer;
-  color: var(--color-teal);
+  color: var(--color-black);
   padding: 0.25rem;
 }
 

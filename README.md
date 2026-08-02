@@ -16,7 +16,8 @@ This README is updated as each feature is delivered — see `PLAN.md` for the fu
   - rows with a duplicate source `id`, an empty `name`/`brand`, or an unrecognized `status` are skipped (and logged as a warning)
   - a `purchaseDate` that doesn't parse as `YYYY-MM-DD` is stored as `null` (row is still seeded) and logged as a warning
   - `status` values are normalized case-insensitively (`"In Use"` → `in use`, `"Repair"` → `in repair`, etc.)
-  - two informational fields present on some seed rows (`assignedTo`, `history`) aren't part of the current schema and are ignored — a hardware item seeded as `in use` is not automatically linked to a rental record
+  - `notes` and `history` are unified into the single `notes` column — both are free-text human context about a device (condition, incidents, etc.) with no meaningful distinction, so a row using either key (or both, space-joined) ends up as one `notes` value instead of the `history` key being silently dropped
+  - `assignedTo` isn't part of the current schema and is ignored — a hardware item seeded as `in use` is not automatically linked to a rental record
 - **Login (MVP)**: `POST /auth/login` verifies email/password and returns the user's id/email/is_admin.
 - **Admin command center API**:
   - `GET /hardware` — list hardware, with filtering and sorting (any authenticated user; see Dashboard below)

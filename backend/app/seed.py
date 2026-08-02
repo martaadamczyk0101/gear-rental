@@ -46,6 +46,17 @@ def load_seed_rows(seed_path: Path = SEED_FILE) -> list:
         return json.load(f)
 
 
+def _combine_notes(row: dict) -> Optional[str]:
+    """`notes` and `history` are both free-text, human-written context about a
+    device (condition, incidents, etc.) - there's no separate "history" feature,
+    so seed rows using either key are unified into the single `notes` column
+    rather than silently dropping whichever key the schema doesn't recognize."""
+    notes = (row.get("notes") or "").strip()
+    history = (row.get("history") or "").strip()
+    combined = " ".join(part for part in (notes, history) if part)
+    return combined or None
+
+
 def seed_hardware(db: Session, rows: list) -> None:
     if db.query(Hardware).count() > 0:
         logger.info("Hardware table already populated, skipping seed")
@@ -92,7 +103,7 @@ def seed_hardware(db: Session, rows: list) -> None:
                 brand=brand,
                 purchase_date=purchase_date,
                 status=status,
-                notes=row.get("notes"),
+                notes=_combine_notes(row),
             )
         )
         inserted += 1
